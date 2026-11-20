@@ -1,0 +1,207 @@
+﻿@model EmpTaxCalculation.Models.Employee
+
+<div>
+
+
+    <form asp-controller="Home" asp-action="InsertEmployee" method="post">
+        <div>
+            <label>Employee Name</label>
+            <input type="text" id="EmpName" name="EmpName" />
+            <span asp-validation-for="EmpName"></span>
+        </div>
+
+        <div>
+            <label>State</label>
+            <select id="StateId" name="StateId">
+                <option value="">-- Select State --</option>
+                @foreach (var item in ViewBag.States)
+                {
+                    <option value="@item.Value">@item.Text</option>
+                }
+            </select>
+            <span asp-validation-for="StateId"></span>
+
+        </div>
+
+        <div>
+            <label>City</label>
+            <select id="CityId" name="CityId">
+                <option value="">-- Select City --</option>
+            </select>
+                        <span asp-validation-for="CityId"></span>
+
+        </div>
+
+        <div>
+            <label>Email</label>
+            <input type="text" id="Email" name="Email" />
+                        <span asp-validation-for="Email"></span>
+
+        </div>
+
+        <div>
+            <label>Mobile</label>
+            <input type="text" id="Mobile" name="Mobile" maxlength="10" />
+                        <span asp-validation-for="Mobile"></span>
+
+        </div>
+
+        <div>
+            <label>Annual Salary</label>
+            <input type="number" id="AnnualSalary" name="AnnualSalary" />
+                        <span asp-validation-for="AnnualSalary"></span>
+
+        </div>
+
+        
+        <div>
+            <label>Total Tax</label>
+            <input type="text" id="TaxAmount" name="TaxAmount" readonly />
+        </div>
+
+
+        <div>
+            <button type="submit">Insert</button>
+
+           <button type="submit"  formaction="@Url.Action("UpdateEmployee", "Home")">Update </button>
+
+            <button type="submit" formaction="@Url.Action("DeleteEmployee", "Home")" 
+            onclick="return confirm('Are you sure you want to delete this employee?')"> Delete</button>
+        </div>
+
+        <input type="hidden" id="EmployeeId" name="EmployeeId" value="0" />
+    </form>
+
+
+    <hr />
+
+    <h3>Employee Details</h3>
+
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Employee ID</th>
+                <th>Name</th>
+                <th>State</th>
+                <th>City</th>
+                <th>Email</th>
+                <th>Mobile</th>
+                <th>Annual Salary</th>
+                <th>Tax Amount</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var emp in ViewBag.Employees)
+            {
+                <tr>
+                    <td>@emp.EmployeeId</td>
+                    <td>@emp.EmpName</td>
+                    <td>@emp.StateName</td>
+                    <td>@emp.CityName</td>
+                    <td>@emp.Email</td>
+                    <td>@emp.Mobile</td>
+                    <td>@emp.AnnualSalary</td>
+                    <td>@emp.TaxAmount</td>
+                    <td>
+                        <button type="button"
+        class="btn btnAction"
+        data-id="@emp.EmployeeId"
+        data-name="@emp.EmpName"
+        data-state="@emp.StateId"
+        data-city="@emp.CityId"
+        data-email="@emp.Email"
+        data-mobile="@emp.Mobile"
+        data-salary="@emp.AnnualSalary"
+        data-tax="@emp.TaxAmount">
+    Action
+</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+
+            var selectedCityId = null;
+
+            $("#StateId").change(function () {
+                var stateId = $(this).val();
+                $("#CityId").empty();
+                $("#CityId").append('<option value="">-- Select City --</option>');
+                if (stateId !== "") {
+                    $.ajax({
+                        url: '@Url.Action("GetCities", "Home")',
+                        type: 'GET',
+                        data: { stateId: stateId },
+                        success: function (data) {
+                            $.each(data, function (i, city) {
+                                $("#CityId").append('<option value="' + city.value + '">' +city.text + '</option>');
+                            });
+
+                            if (selectedCityId !== null) {
+                                $("#CityId").val(selectedCityId);
+                                selectedCityId = null;
+                            }
+                        },
+
+                        error: function (xhr) {
+                            console.log(xhr.responseText);
+                            alert("Unable to load cities.");
+                        }
+                    });
+                }
+            });
+
+            $(document).on("click", ".btnAction", function () {
+                var stateId = $(this).attr("data-state");
+                selectedCityId = String($(this).attr("data-city"));
+                $("#EmployeeId").val($(this).attr("data-id"));
+                $("#EmpName").val($(this).attr("data-name"));
+                $("#Email").val($(this).attr("data-email"));
+                $("#Mobile").val($(this).attr("data-mobile"));
+                $("#AnnualSalary").val($(this).attr("data-salary"));
+                $("#TaxAmount").val($(this).attr("data-tax"));
+                $("#StateId").val(stateId).trigger("change");
+            });
+
+            $("#Mobile").blur(function () {
+                var mobile = $(this).val();
+                var regex = /^[6-9]\d{9}$/;
+                if (mobile !== "" && !regex.test(mobile)) {
+                    alert("Please enter valid 10 digit mobile number");
+                }
+            });
+
+            $("#Email").blur(function () {
+                var email = $(this).val();
+                var regex = /^[^\s@@]+@@[^\s@@]+\.[^\s@@]+$/;
+                if (email !== "" && !regex.test(email)) {
+                    alert("Please enter a valid Email ID");
+                }
+            });
+
+            $("#AnnualSalary").blur(function () {
+
+                var salary = parseFloat($(this).val()) || 0;
+                var tax = 0;
+                if (salary > 300000)
+                    tax += (Math.min(salary, 500000) - 300000) * 2 / 100;
+
+                if (salary > 500000)
+                    tax += (Math.min(salary, 700000) - 500000) * 5 / 100;
+
+                if (salary > 700000)
+                    tax += (Math.min(salary, 1000000) - 700000) * 7 / 100;
+
+                if (salary > 1000000)
+                    tax += (salary - 1000000) * 10 / 100;
+                $("#TaxAmount").val(tax.toFixed(2));
+            });
+        });
+    </script>
+}
